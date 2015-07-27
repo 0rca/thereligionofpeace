@@ -65,7 +65,7 @@ main = do
     putStrLn "Building dictionaries..."
 
     let countriesDict = dictionaryWithKey (!!1) rows
-    let citiesDict    = dictionaryWithKey (\rec -> rec!!1 ++ ", " ++ rec!!2) rows
+    let citiesDict    = dictionaryWithKey (\rec -> rec!!2 ++ ", " ++ rec!!1) rows
 
     -- force evaluation of dictionaries
     putStrLn $ "Total rows: " ++ (show.length) rows
@@ -73,16 +73,14 @@ main = do
     putStrLn $ "Total cities: " ++ (show.length) (M.keys citiesDict)
 
     scotty 3000 $ do
-        get "/countries" $ json $ M.keys countriesDict
-
         get "/cities" $ json $ M.keys citiesDict
-
-        get "/:country" $ do
+        get "/countries" $ json $ M.keys countriesDict
+        get "/countries/:country" $ do
             country <- param "country"
-            limit <- param "limit" `rescue` (\_ -> return 10)
-            json $ take limit $ fromMaybe [] $ M.lookup country countriesDict
+            -- limit <- param "limit" `rescue` (\_ -> return 10)
+            json $ fromMaybe [] $ M.lookup country countriesDict
 
-        get "/:country/:city" $ do
+        get "/countries/:country/:city" $ do
             country <- param "country"
             city <- param "city"
             let byCity = (==city).(!!2)

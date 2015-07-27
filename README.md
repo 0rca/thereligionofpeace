@@ -15,11 +15,12 @@ Run `stack exec thereligionofpeace resources/*.html` and go to [this page](http:
 
 # API
 
+`/cities` - list of cities
+
 `/countries` - list of countries
 
-`/cities` - same for cities
+`/countries/:country` - list of crimes for the `country`
 
-`/:country` - list of crimes for the `country`
-
-`/:country/:city` - same for a particular city
+`/countries/:country/:city` - narrow search to a particular city within a
+country
 
