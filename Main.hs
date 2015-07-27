@@ -34,7 +34,7 @@ td_ :: String
 td_    = "<td>"
 
 isDataTable :: [Tag String] -> Bool
-isDataTable = not.null.(partitions (~== th_)).head.(partitions (~== tr_))
+isDataTable = not.null.partitions (~== th_).head.partitions (~== tr_)
 
 extractRows :: String -> [[String]]
 extractRows =
@@ -44,10 +44,10 @@ extractRows =
     filter isDataTable                              >>>
     concatMap tail                                  >>> -- [a]
     partitions (~== tr_)                            >>> -- [[a]]
-    liftA (partitions (~== td_))                    >>> -- [[[a]]]
-    (liftA.liftA) (filter isTagText)                >>> -- [[[a]]]
-    (liftA.liftA.liftA) (unwords.words.fromTagText) >>> -- [[[String]]]
-    (liftA.liftA) (fromMaybe "" . listToMaybe)          -- [[String]]
+    (liftA $ partitions (~== td_))                  >>> -- [[[a]]]
+    (liftA.liftA $ filter isTagText)                >>> -- [[[a]]]
+    (liftA.liftA.liftA $ unwords.words.fromTagText) >>> -- [[[String]]]
+    (liftA.liftA $ fromMaybe "" . listToMaybe)          -- [[String]]
 
 loadData :: FilePath -> IO [[String]]
 loadData filepath =
@@ -60,9 +60,6 @@ type Dictionary = Map.Map String [[String]]
 
 populateDictionary :: ([String] -> (String,[String])) -> [[String]] -> Dictionary
 populateDictionary f = foldl (\acc x -> let (k,v) = f x in Map.insertWith (++) k [v] acc) Map.empty
-
-complement :: (a -> Bool) -> a -> Bool
-complement f = not.f
 
 main :: IO ()
 main = do
