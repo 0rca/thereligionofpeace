@@ -41,10 +41,10 @@ extractRows =
     filter isDataTable                              >>>
     concatMap tail                                  >>> -- [a]
     partitions (~== tr_)                            >>> -- [[a]]
-    (liftA $ partitions (~== td_))                  >>> -- [[[a]]]
-    (liftA.liftA $ filter isTagText)                >>> -- [[[a]]]
-    (liftA.liftA.liftA $ unwords.words.fromTagText) >>> -- [[[String]]]
-    (liftA.liftA $ fromMaybe "" . listToMaybe)          -- [[String]]
+    (map $ partitions (~== td_))                    >>> -- [[[a]]]
+    (map.map $ filter isTagText)                    >>> -- [[[a]]]
+    (map.map.map $ unwords.words.fromTagText)       >>> -- [[[String]]]
+    (map.map $ fromMaybe "" . listToMaybe)              -- [[String]]
 
 loadData :: FilePath -> IO [[String]]
 loadData filepath =
