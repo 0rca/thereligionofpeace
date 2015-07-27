@@ -1,19 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 import Text.HTML.TagSoup
 import System.IO
 import qualified System.IO.Strict as S (hGetContents)
-import Control.Monad (forM_,liftM)
-import Control.Applicative (liftA)
-import Data.Maybe (fromMaybe,listToMaybe, maybeToList)
+import Control.Monad (liftM)
+import Data.Maybe (fromMaybe,listToMaybe)
 import System.Environment (getArgs)
 import Control.Arrow
-import Data.List (intercalate, nub, sort, sortBy)
-import Data.Ord (comparing)
-import Control.Monad.IO.Class (liftIO)
 
 import Web.Scotty
-import Data.Monoid (mconcat)
-import Data.String (fromString)
 
 import qualified Data.Map.Strict as Map
 
@@ -33,6 +28,8 @@ td_    = "<td>"
 isDataTable :: [Tag String] -> Bool
 isDataTable = not.null.partitions (~== th_).head.partitions (~== tr_)
 
+-- takes a html text and returns a list of
+-- [date,country,city,killed,injured,description] :: [String]
 extractRows :: String -> [[String]]
 extractRows =
     parseTags                                       >>> -- [a]
@@ -45,6 +42,7 @@ extractRows =
     (map.map $ filter isTagText)                    >>> -- [[[a]]]
     (map.map.map $ unwords.words.fromTagText)       >>> -- [[[String]]]
     (map.map $ fromMaybe "" . listToMaybe)              -- [[String]]
+
 
 loadData :: FilePath -> IO [[String]]
 loadData filepath =
