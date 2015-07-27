@@ -20,6 +20,7 @@ executable thereligionofpeace
   -- other-modules:
   -- other-extensions:
   build-depends:
+    deepseq,
     containers,
     parallel,
     scotty,

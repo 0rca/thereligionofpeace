@@ -18,6 +18,8 @@ import Control.Parallel.Strategies
 
 import qualified Data.Map.Strict as Map
 
+import Control.DeepSeq (($!!))
+
 -- isDataTable == table with a header
 table_ :: String
 table_ = "<table>"
@@ -65,11 +67,14 @@ complement f = not.f
 main :: IO ()
 main = do
     filenames <- getArgs
-    rows <- (liftM $ filter (complement null) . concat) $ mapM loadData filenames
+    rows <- mapM loadData filenames >>= \parts -> return $ filter (not.null) $ concat $!! parts
+
     putStrLn "Building dictionaries..."
     let countriesDict = populateDictionary (\row@(_:c:_) -> (c,row)) rows
     let citiesDict    = populateDictionary (\row@(_:co:ci:_) -> (ci ++ ", " ++ co, row)) rows
     putStrLn $ "Total rows: " ++ (show.length) rows
+    putStrLn $ "Total countries: " ++ (show.length) (Map.keys countriesDict)
+    putStrLn $ "Total cities: " ++ (show.length) (Map.keys citiesDict)
     scotty 3000 $ do
         get "/countries" $ json $ Map.keys countriesDict
         get "/cities" $ json $ Map.keys citiesDict
@@ -80,6 +85,5 @@ main = do
         get "/:country/:city" $ do
             country <- param "country"
             city <- param "city"
-
             json $ filter (\(_:_:c:_) -> c == city) $ fromMaybe [] $ Map.lookup country countriesDict
 
