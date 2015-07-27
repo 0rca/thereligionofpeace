@@ -67,16 +67,22 @@ main = do
 
     let countriesDict = populateDictionary (\row@(_:c:_) -> (c,row)) rows
     let citiesDict    = populateDictionary (\row@(_:co:ci:_) -> (ci ++ ", " ++ co, row)) rows
+
+    -- force evaluation of dictionaries
     putStrLn $ "Total rows: " ++ (show.length) rows
     putStrLn $ "Total countries: " ++ (show.length) (Map.keys countriesDict)
     putStrLn $ "Total cities: " ++ (show.length) (Map.keys citiesDict)
+
     scotty 3000 $ do
         get "/countries" $ json $ Map.keys countriesDict
+
         get "/cities" $ json $ Map.keys citiesDict
+
         get "/:country" $ do
             country <- param "country"
             limit <- param "limit" `rescue` (\_ -> return 10)
             json $ take limit $ fromMaybe [] $ Map.lookup country countriesDict
+
         get "/:country/:city" $ do
             country <- param "country"
             city <- param "city"
