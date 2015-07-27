@@ -14,11 +14,8 @@ import Control.Monad.IO.Class (liftIO)
 import Web.Scotty
 import Data.Monoid (mconcat)
 import Data.String (fromString)
-import Control.Parallel.Strategies
 
 import qualified Data.Map.Strict as Map
-
-import Control.DeepSeq (($!!))
 
 -- isDataTable == table with a header
 table_ :: String
@@ -64,9 +61,12 @@ populateDictionary f = foldl (\acc x -> let (k,v) = f x in Map.insertWith (++) k
 main :: IO ()
 main = do
     filenames <- getArgs
-    rows <- mapM loadData filenames >>= \parts -> return $ filter (not.null) $ concat $!! parts
+    parts <- mapM loadData filenames
+
+    let rows = filter (not.null) $ concat parts
 
     putStrLn "Building dictionaries..."
+
     let countriesDict = populateDictionary (\row@(_:c:_) -> (c,row)) rows
     let citiesDict    = populateDictionary (\row@(_:co:ci:_) -> (ci ++ ", " ++ co, row)) rows
     putStrLn $ "Total rows: " ++ (show.length) rows
@@ -77,10 +77,11 @@ main = do
         get "/cities" $ json $ Map.keys citiesDict
         get "/:country" $ do
             country <- param "country"
-            limit <- (param "limit") `rescue` (\_ -> return 10)
+            limit <- param "limit" `rescue` (\_ -> return 10)
             json $ take limit $ fromMaybe [] $ Map.lookup country countriesDict
         get "/:country/:city" $ do
             country <- param "country"
             city <- param "city"
-            json $ filter (\(_:_:c:_) -> c == city) $ fromMaybe [] $ Map.lookup country countriesDict
+            let byCity (_:_:c:_) = c == city
+            json $ filter byCity $ fromMaybe [] $ Map.lookup country countriesDict
 
