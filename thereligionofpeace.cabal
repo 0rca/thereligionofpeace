@@ -20,9 +20,7 @@ executable thereligionofpeace
   -- other-modules:
   -- other-extensions:
   build-depends:
-    deepseq,
     containers,
-    parallel,
     scotty,
     strict,
     tagsoup,
@@ -34,3 +32,8 @@ executable thereligionofpeace
     base >=4.7 && <4.8
   -- hs-source-dirs:
   default-language:    Haskell2010
+  ghc-options:
+    -O2
+    -threaded
+    -eventlog
+    -rtsopts

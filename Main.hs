@@ -7,10 +7,9 @@ import Control.Monad (liftM)
 import Data.Maybe (fromMaybe,listToMaybe)
 import System.Environment (getArgs)
 import Control.Arrow
-
 import Web.Scotty
 
-import qualified Data.Map.Strict as Map
+import qualified Data.Map.Lazy as M
 
 -- isDataTable == table with a header
 table_ :: String
@@ -51,10 +50,10 @@ loadData filepath =
         putStrLn $ "Reading " ++ filepath
         liftM extractRows $ S.hGetContents h
 
-type Dictionary = Map.Map String [[String]]
+type CrimeData = [String]
 
-populateDictionary :: ([String] -> (String,[String])) -> [[String]] -> Dictionary
-populateDictionary f = foldl (\acc x -> let (k,v) = f x in Map.insertWith (++) k [v] acc) Map.empty
+dictionaryWithKey :: (CrimeData -> String) -> [CrimeData] -> M.Map String [CrimeData]
+dictionaryWithKey keyFn xs = M.fromListWith (++) [(keyFn x, [x]) | x <- xs] where
 
 main :: IO ()
 main = do
@@ -65,27 +64,27 @@ main = do
 
     putStrLn "Building dictionaries..."
 
-    let countriesDict = populateDictionary (\row@(_:c:_) -> (c,row)) rows
-    let citiesDict    = populateDictionary (\row@(_:co:ci:_) -> (ci ++ ", " ++ co, row)) rows
+    let countriesDict = dictionaryWithKey (!!1) rows
+    let citiesDict    = dictionaryWithKey (\rec -> rec!!1 ++ ", " ++ rec!!2) rows
 
     -- force evaluation of dictionaries
     putStrLn $ "Total rows: " ++ (show.length) rows
-    putStrLn $ "Total countries: " ++ (show.length) (Map.keys countriesDict)
-    putStrLn $ "Total cities: " ++ (show.length) (Map.keys citiesDict)
+    putStrLn $ "Total countries: " ++ (show.length) (M.keys countriesDict)
+    putStrLn $ "Total cities: " ++ (show.length) (M.keys citiesDict)
 
     scotty 3000 $ do
-        get "/countries" $ json $ Map.keys countriesDict
+        get "/countries" $ json $ M.keys countriesDict
 
-        get "/cities" $ json $ Map.keys citiesDict
+        get "/cities" $ json $ M.keys citiesDict
 
         get "/:country" $ do
             country <- param "country"
             limit <- param "limit" `rescue` (\_ -> return 10)
-            json $ take limit $ fromMaybe [] $ Map.lookup country countriesDict
+            json $ take limit $ fromMaybe [] $ M.lookup country countriesDict
 
         get "/:country/:city" $ do
             country <- param "country"
             city <- param "city"
-            let byCity (_:_:c:_) = c == city
-            json $ filter byCity $ fromMaybe [] $ Map.lookup country countriesDict
+            let byCity = (==city).(!!2)
+            json $ filter byCity $ fromMaybe [] $ M.lookup country countriesDict
 
