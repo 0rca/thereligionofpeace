@@ -87,7 +87,7 @@ main = do
     putStrLn "Building dictionaries..."
 
     let countriesDict = dictionaryWithKey country attacks
-    let citiesDict    = dictionaryWithKey (\x -> city x ++ ", " ++ country x) attacks
+    let citiesDict    = dictionaryWithKey city attacks
 
     -- force evaluation of dictionaries
     putStrLn $ "Total attacks: " ++ (show.length) attacks
@@ -96,6 +96,10 @@ main = do
 
     scotty 3000 $ do
         get "/cities" $ json $ M.keys citiesDict
+        get "/cities/:city" $ do
+            cityP <- param "city"
+            json $ fromMaybe [] $ M.lookup cityP citiesDict
+
         get "/countries" $ json $ M.keys countriesDict
         get "/countries/:country" $ do
             countryP <- param "country"

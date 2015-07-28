@@ -17,9 +17,11 @@ Run `stack exec thereligionofpeace resources/*.html` and go to [this page](http:
 
 `/cities` - list of cities
 
+`/cities/:city` - list of attacks in the city
+
 `/countries` - list of countries
 
-`/countries/:country` - list of crimes for the `country`
+`/countries/:country` - list of attacks for the `country`
 
 `/countries/:country/:city` - narrow search to a particular city within a
 country
