@@ -28,8 +28,24 @@ td_    = "<td>"
 isDataTable :: [Tag String] -> Bool
 isDataTable = not.null.partitions (~== th_).head.partitions (~== tr_)
 
--- takes a html text and returns a list of
--- [date,country,city,killed,injured,description] :: [String]
+data Attack = Attack { date :: String
+                     , country :: String
+                     , city :: String
+                     , killed :: String
+                     , injured :: String
+                     , description :: String
+                     }
+
+instance ToJSON Attack where
+    toJSON (Attack date country city killed injured description) = object $ [
+        "date" .= date,
+        "country" .= country,
+        "city" .= city,
+        "killed" .= killed,
+        "injured" .= injured,
+        "description" .= description ]
+
+-- takes a html text and returns a list of attacks
 extractRows :: String -> [[String]]
 extractRows =
     parseTags                                       >>> -- [a]
@@ -43,6 +59,8 @@ extractRows =
     (map.map.map $ unwords.words.fromTagText)       >>> -- [[[String]]]
     (map.map $ fromMaybe "" . listToMaybe)              -- [[String]]
 
+fromRow :: [String] -> Attack
+fromRow r = Attack (r!!0) (r!!1) (r!!2) (r!!3) (r!!4) (r!!5)
 
 loadData :: FilePath -> IO [[String]]
 loadData filepath =
@@ -51,9 +69,7 @@ loadData filepath =
         putStrLn $ "Reading " ++ filepath
         liftM extractRows $ S.hGetContents h
 
-type CrimeData = [String]
-
-dictionaryWithKey :: (CrimeData -> String) -> [CrimeData] -> M.Map String [CrimeData]
+dictionaryWithKey :: (Attack -> String) -> [Attack] -> M.Map String [Attack]
 dictionaryWithKey keyFn xs = M.fromListWith (++) [(keyFn x, [x]) | x <- xs] where
 
 data Example = Example {name :: String, age :: Int}
@@ -66,31 +82,31 @@ main = do
     filenames <- getArgs
     parts <- mapM loadData filenames
 
-    let rows = filter (not.null) $ concat parts
+    let attacks = map fromRow $ filter (not.null) $ concat parts
 
     putStrLn "Building dictionaries..."
 
-    let countriesDict = dictionaryWithKey (!!1) rows
-    let citiesDict    = dictionaryWithKey (\rec -> rec!!2 ++ ", " ++ rec!!1) rows
+    let countriesDict = dictionaryWithKey country attacks
+    let citiesDict    = dictionaryWithKey (\x -> city x ++ ", " ++ country x) attacks
 
     -- force evaluation of dictionaries
-    putStrLn $ "Total rows: " ++ (show.length) rows
-    putStrLn $ "Total countries: " ++ (show.length) (M.keys countriesDict)
-    putStrLn $ "Total cities: " ++ (show.length) (M.keys citiesDict)
+    putStrLn $ "Total attacks: " ++ (show.length) attacks
+    putStrLn $ "In countries: " ++ (show.length) (M.keys countriesDict)
+    putStrLn $ "In cities: " ++ (show.length) (M.keys citiesDict)
 
     scotty 3000 $ do
         get "/cities" $ json $ M.keys citiesDict
         get "/countries" $ json $ M.keys countriesDict
         get "/countries/:country" $ do
-            country <- param "country"
+            countryP <- param "country"
             -- limit <- param "limit" `rescue` (\_ -> return 10)
-            json $ fromMaybe [] $ M.lookup country countriesDict
+            json $ fromMaybe [] $ M.lookup countryP countriesDict
 
         get "/countries/:country/:city" $ do
-            country <- param "country"
-            city <- param "city"
-            let byCity = (==city).(!!2)
-            json $ filter byCity $ fromMaybe [] $ M.lookup country countriesDict
+            countryP <- param "country"
+            cityP <- param "city"
+            let byCity = \x -> cityP == city x
+            json $ filter byCity $ fromMaybe [] $ M.lookup countryP countriesDict
 
 
         get "/example" $ json $ Example "Hemingway" 21
