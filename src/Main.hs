@@ -8,6 +8,7 @@ import Data.Maybe (fromMaybe,listToMaybe)
 import System.Environment (getArgs)
 import Control.Arrow
 import Web.Scotty
+import Data.Aeson.Types
 
 import qualified Data.Map.Lazy as M
 
@@ -55,6 +56,11 @@ type CrimeData = [String]
 dictionaryWithKey :: (CrimeData -> String) -> [CrimeData] -> M.Map String [CrimeData]
 dictionaryWithKey keyFn xs = M.fromListWith (++) [(keyFn x, [x]) | x <- xs] where
 
+data Example = Example {name :: String, age :: Int}
+
+instance ToJSON Example where
+    toJSON (Example name age) = object ["name" .= name, "age" .= age]
+
 main :: IO ()
 main = do
     filenames <- getArgs
@@ -85,4 +91,7 @@ main = do
             city <- param "city"
             let byCity = (==city).(!!2)
             json $ filter byCity $ fromMaybe [] $ M.lookup country countriesDict
+
+
+        get "/example" $ json $ Example "Hemingway" 21
 
