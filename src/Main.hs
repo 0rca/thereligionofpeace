@@ -112,8 +112,8 @@ paginate page limit = take limit . drop (page*limit)
 
 paginateM :: [a] -> ActionM [a]
 paginateM xs = do
-    limit <- param "limit" `rescue` (\_ -> return 25)
-    page <- param "page" `rescue` (\_ -> return 0)
+    limit <- param "limit" `rescue` (return . const 25)
+    page <- param "page" `rescue` (return . const 0)
     return $ paginate page limit xs
 
 list :: String -> M.Map String [Attack] -> [Attack]
