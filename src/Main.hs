@@ -16,6 +16,7 @@ import qualified Data.Map.Strict as M
 
 import Text.HTML.TagSoup
 import Web.Scotty
+import Network.Wai.Middleware.RequestLogger
 
 -- isDataTable == table with a header
 table_ :: String
@@ -138,6 +139,8 @@ main = do
     putStrLn $ "Total injured: " ++ (show.sum.map injured) attacks
 
     scotty 3000 $ do
+        middleware logStdoutDev
+
         get "/cities" $ json $ M.keys citiesDict
         get "/cities/:city" $ do
             cityP <- param "city"
