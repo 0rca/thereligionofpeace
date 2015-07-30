@@ -1,22 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Text.HTML.TagSoup
 import System.IO
 import qualified System.IO.Strict as S (hGetContents)
+import System.Environment (getArgs)
+
 import Control.Monad (liftM)
 import Control.Applicative
-import Data.Maybe (fromMaybe,listToMaybe)
-import System.Environment (getArgs)
-import Control.Arrow
-import Web.Scotty
+
 import Data.Aeson.Types
 import Data.Hourglass
 import Data.Maybe
 import Data.Text (pack)
-import Data.Function (on)
 import Data.List (sort)
+import qualified Data.Map.Strict as M
 
-import qualified Data.Map.Lazy as M
+import Text.HTML.TagSoup
+import Web.Scotty
 
 -- isDataTable == table with a header
 table_ :: String
@@ -107,6 +106,18 @@ data Example = Example {name :: String, age :: Int}
 instance ToJSON Example where
     toJSON (Example name age) = object ["name" .= name, "age" .= age]
 
+paginate :: Int -> Int -> [a] -> [a]
+paginate page limit = take limit . drop (page*limit)
+
+paginateM :: [a] -> ActionM [a]
+paginateM xs = do
+    limit <- param "limit" `rescue` (\_ -> return 25)
+    page <- param "page" `rescue` (\_ -> return 0)
+    return $ paginate page limit xs
+
+list :: String -> M.Map String [Attack] -> [Attack]
+list k = fromMaybe [] . M.lookup k
+
 main :: IO ()
 main = do
     filenames <- getArgs
@@ -130,20 +141,16 @@ main = do
         get "/cities" $ json $ M.keys citiesDict
         get "/cities/:city" $ do
             cityP <- param "city"
-            json $ fromMaybe [] $ M.lookup cityP citiesDict
+            paginateM (list cityP citiesDict) >>= json
 
         get "/countries" $ json $ M.keys countriesDict
+
         get "/countries/:country" $ do
             countryP <- param "country"
-            -- limit <- param "limit" `rescue` (\_ -> return 10)
-            json $ fromMaybe [] $ M.lookup countryP countriesDict
+            paginateM (list countryP countriesDict) >>= json
 
         get "/countries/:country/:city" $ do
             countryP <- param "country"
             cityP <- param "city"
-            let byCity = \x -> cityP == city x
-            json $ filter byCity $ fromMaybe [] $ M.lookup countryP countriesDict
-
-
-        get "/example" $ json $ Example "Hemingway" 21
+            paginateM (filter (\x -> cityP == city x) $ list countryP countriesDict) >>= json
 
