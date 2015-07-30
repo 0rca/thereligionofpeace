@@ -31,8 +31,8 @@ isDataTable = not.null.partitions (~== th_).head.partitions (~== tr_)
 data Attack = Attack { date :: String
                      , country :: String
                      , city :: String
-                     , killed :: String
-                     , injured :: String
+                     , killed :: Integer
+                     , injured :: Integer
                      , description :: String
                      }
 
@@ -64,8 +64,12 @@ extractColumns = map (map (unwords.words.fromTagText).filter isTagText).partitio
 normaliseColumns :: [[String]] -> [String]
 normaliseColumns = map $ fromMaybe "" . listToMaybe
 
+readInt :: String -> Integer
+readInt "" = 0
+readInt s  = read s
+
 fromRow :: [String] -> Attack
-fromRow r = Attack (r!!0) (r!!1) (r!!2) (r!!3) (r!!4) (r!!5)
+fromRow r = Attack (r!!0) (r!!1) (r!!2) (readInt $ r!!3) (readInt $ r!!4) (r!!5)
 
 loadData :: FilePath -> IO [[String]]
 loadData filepath =
@@ -98,6 +102,8 @@ main = do
     putStrLn $ "Total attacks: " ++ (show.length) attacks
     putStrLn $ "In countries: " ++ (show.length) (M.keys countriesDict)
     putStrLn $ "In cities: " ++ (show.length) (M.keys citiesDict)
+    putStrLn $ "Total killed: " ++ (show.sum.map killed) attacks
+    putStrLn $ "Total injured: " ++ (show.sum.map injured) attacks
 
     scotty 3000 $ do
         get "/cities" $ json $ M.keys citiesDict
