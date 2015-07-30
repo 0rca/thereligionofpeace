@@ -4,11 +4,17 @@ import Text.HTML.TagSoup
 import System.IO
 import qualified System.IO.Strict as S (hGetContents)
 import Control.Monad (liftM)
+import Control.Applicative
 import Data.Maybe (fromMaybe,listToMaybe)
 import System.Environment (getArgs)
 import Control.Arrow
 import Web.Scotty
 import Data.Aeson.Types
+import Data.Hourglass
+import Data.Maybe
+import Data.Text (pack)
+import Data.Function (on)
+import Data.List (sort)
 
 import qualified Data.Map.Lazy as M
 
@@ -28,13 +34,16 @@ td_    = "<td>"
 isDataTable :: [Tag String] -> Bool
 isDataTable = not.null.partitions (~== th_).head.partitions (~== tr_)
 
-data Attack = Attack { date :: String
+data Attack = Attack { date :: DateTime
                      , country :: String
                      , city :: String
                      , killed :: Integer
                      , injured :: Integer
                      , description :: String
-                     }
+                     } deriving (Eq,Show)
+
+instance Ord Attack where
+    compare a b = compare (date a) (date b)
 
 instance ToJSON Attack where
     toJSON (Attack date country city killed injured description) = object $ [
@@ -44,6 +53,9 @@ instance ToJSON Attack where
         "killed" .= killed,
         "injured" .= injured,
         "description" .= description ]
+
+instance ToJSON DateTime where
+    toJSON time = String $ pack $ timePrint ISO8601_Date time
 
 -- takes a html text and returns a list of attacks
 extractData :: String -> [[String]]
@@ -64,12 +76,21 @@ extractColumns = map (map (unwords.words.fromTagText).filter isTagText).partitio
 normaliseColumns :: [[String]] -> [String]
 normaliseColumns = map $ fromMaybe "" . listToMaybe
 
-readInt :: String -> Integer
-readInt "" = 0
-readInt s  = read s
+readInt :: String -> Maybe Integer
+readInt "" = Just 0
+readInt s  = Just $ read s
 
-fromRow :: [String] -> Attack
-fromRow r = Attack (r!!0) (r!!1) (r!!2) (readInt $ r!!3) (readInt $ r!!4) (r!!5)
+readDate :: String -> Maybe DateTime
+readDate  = timeParse [Format_Year4,Format_Text '.',Format_Month2, Format_Text '.', Format_Day2]
+
+fromRow :: [String] -> Maybe Attack
+fromRow r = Attack <$>
+                    (readDate $ r!!0) <*>
+                    Just (r!!1) <*>
+                    Just (r!!2) <*>
+                    (readInt $ r!!3) <*>
+                    (readInt $ r!!4) <*>
+                    Just (r!!5)
 
 loadData :: FilePath -> IO [[String]]
 loadData filepath =
@@ -91,7 +112,7 @@ main = do
     filenames <- getArgs
     parts <- mapM loadData filenames
 
-    let attacks = map fromRow $ filter (not.null) $ concat parts
+    let attacks = sort $ map fromJust $ map fromRow $ filter (not.null) $ concat parts
 
     putStrLn "Building dictionaries..."
 
