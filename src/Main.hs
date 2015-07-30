@@ -46,18 +46,23 @@ instance ToJSON Attack where
         "description" .= description ]
 
 -- takes a html text and returns a list of attacks
-extractRows :: String -> [[String]]
-extractRows =
-    parseTags                                       >>> -- [a]
-    canonicalizeTags                                >>>
-    partitions (~== table_)                         >>> -- [[a]]
-    filter isDataTable                              >>>
-    concatMap tail                                  >>> -- [a]
-    partitions (~== tr_)                            >>> -- [[a]]
-    (map $ partitions (~== td_))                    >>> -- [[[a]]]
-    (map.map $ filter isTagText)                    >>> -- [[[a]]]
-    (map.map.map $ unwords.words.fromTagText)       >>> -- [[[String]]]
-    (map.map $ fromMaybe "" . listToMaybe)              -- [[String]]
+extractData :: String -> [[String]]
+extractData = map normaliseColumns.map extractColumns.extractRows.extractTable.extractTags
+
+extractTags :: String -> [Tag String]
+extractTags = canonicalizeTags.parseTags
+
+extractTable :: [Tag String] -> [Tag String]
+extractTable = concatMap tail . filter isDataTable . partitions (~== table_)
+
+extractRows :: [Tag String] -> [[Tag String]]
+extractRows = partitions (~== tr_)
+
+extractColumns :: [Tag String] -> [[String]]
+extractColumns = map (map (unwords.words.fromTagText).filter isTagText).partitions (~== td_)
+
+normaliseColumns :: [[String]] -> [String]
+normaliseColumns = map $ fromMaybe "" . listToMaybe
 
 fromRow :: [String] -> Attack
 fromRow r = Attack (r!!0) (r!!1) (r!!2) (r!!3) (r!!4) (r!!5)
@@ -67,7 +72,7 @@ loadData filepath =
     withFile filepath ReadMode $ \h -> do
         hSetEncoding h latin1
         putStrLn $ "Reading " ++ filepath
-        liftM extractRows $ S.hGetContents h
+        liftM extractData $ S.hGetContents h
 
 dictionaryWithKey :: (Attack -> String) -> [Attack] -> M.Map String [Attack]
 dictionaryWithKey keyFn xs = M.fromListWith (++) [(keyFn x, [x]) | x <- xs] where
