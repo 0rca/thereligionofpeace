@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
+module Main where
 
 import System.IO
 import qualified System.IO.Strict as S (hGetContents)
@@ -11,6 +13,7 @@ import Data.Aeson.Types
 import Data.Hourglass
 import Data.Maybe
 import Data.Text (pack)
+import qualified Data.Text.Lazy as LT
 import Data.List (sort)
 import qualified Data.Map.Strict as M
 
@@ -57,6 +60,8 @@ instance ToJSON Attack where
 instance ToJSON DateTime where
     toJSON time = String $ pack $ timePrint ISO8601_Date time
 
+type Lens a s = forall f.Functor f => (a -> f a) -> s -> f s
+
 -- takes a html text and returns a list of attacks
 extractData :: String -> [[String]]
 extractData = map normaliseColumns.map extractColumns.extractRows.extractTable.extractTags
@@ -83,8 +88,8 @@ readInt s  = Just $ read s
 readDate :: String -> Maybe DateTime
 readDate  = timeParse [Format_Year4,Format_Text '.',Format_Month2, Format_Text '.', Format_Day2]
 
-fromRow :: [String] -> Maybe Attack
-fromRow r = Attack <$>
+attackFromColumns :: [String] -> Maybe Attack
+attackFromColumns r = Attack <$>
                     (readDate $ r!!0) <*>
                     Just (r!!1) <*>
                     Just (r!!2) <*>
@@ -92,68 +97,86 @@ fromRow r = Attack <$>
                     (readInt $ r!!4) <*>
                     Just (r!!5)
 
-loadData :: FilePath -> IO [[String]]
-loadData filepath =
+getContentsOf :: FilePath -> IO String
+getContentsOf filepath =
     withFile filepath ReadMode $ \h -> do
         hSetEncoding h latin1
         putStrLn $ "Reading " ++ filepath
-        liftM extractData $ S.hGetContents h
+        S.hGetContents h
 
-dictionaryWithKey :: (Attack -> String) -> [Attack] -> M.Map String [Attack]
+type Dict = M.Map String [Attack]
+
+dictionaryWithKey :: (Attack -> String) -> [Attack] -> Dict
 dictionaryWithKey keyFn xs = M.fromListWith (++) [(keyFn x, [x]) | x <- xs] where
 
-data Example = Example {name :: String, age :: Int}
-
-instance ToJSON Example where
-    toJSON (Example name age) = object ["name" .= name, "age" .= age]
-
-paginate :: Int -> Int -> [a] -> [a]
-paginate page limit = take limit . drop (page*limit)
-
-paginateM :: [a] -> ActionM [a]
-paginateM xs = do
+paginate   :: [a] -> ActionM [a]
+paginate xs = do
     limit <- param "limit" `rescue` (return . const 25)
-    page <- param "page" `rescue` (return . const 0)
-    return $ paginate page limit xs
+    page  <- param "page"  `rescue` (return . const 0)
+    return $ paginate' page limit xs where
+        paginate' page limit = take limit . drop (page * limit)
 
-list :: String -> M.Map String [Attack] -> [Attack]
+filterByCity   :: [Attack] ->ActionM [Attack]
+filterByCity xs = do city' <- param "city"
+                     return . filter (\x ->city' == city x) $ xs
+
+-- lookupParam  :: String -> Dict -> ActionM [Attack]
+lookupParam n dict = do x <- param n
+                        return $ list x dict
+
+lookupCountry :: Dict -> ActionM [Attack]
+lookupCountry  = lookupParam "country"
+
+lookupCity :: Dict -> ActionM [Attack]
+lookupCity  = lookupParam "city"
+
+list :: String -> Dict -> [Attack]
 list k = fromMaybe [] . M.lookup k
 
-main :: IO ()
-main = do
-    filenames <- getArgs
-    parts <- mapM loadData filenames
+attacks :: [FilePath] -> IO [Attack]
+attacks files = do
+    contents <- concat <$> mapM getContentsOf files
+    return . sort . map (fromJust . attackFromColumns) . filter (not . null) . extractData $ contents
 
-    let attacks = sort $ map fromJust $ map fromRow $ filter (not.null) $ concat parts
+loadAll :: [FilePath] -> IO (Dict,Dict)
+loadAll files = do
+    atks <- attacks files
 
     putStrLn "Building dictionaries..."
 
-    let countriesDict = dictionaryWithKey country attacks
-    let citiesDict    = dictionaryWithKey city attacks
+    let countriesDict = dictionaryWithKey country atks
+    let citiesDict    = dictionaryWithKey city atks
 
     -- force evaluation of dictionaries
-    putStrLn $ "Total attacks: " ++ (show.length) attacks
-    putStrLn $ "In countries: " ++ (show.length) (M.keys countriesDict)
-    putStrLn $ "In cities: " ++ (show.length) (M.keys citiesDict)
-    putStrLn $ "Total killed: " ++ (show.sum.map killed) attacks
-    putStrLn $ "Total injured: " ++ (show.sum.map injured) attacks
+    putStrLn $ "Total attacks: " ++ (show . length) atks
+    putStrLn $ "In countries: " ++ (show . length) (M.keys countriesDict)
+    putStrLn $ "In cities: " ++ (show . length) (M.keys citiesDict)
+    putStrLn $ "Total killed: " ++ (show . sum . map killed) atks
+    putStrLn $ "Total injured: " ++ (show . sum . map injured) atks
+    return (countriesDict,citiesDict)
 
-    scotty 3000 $ do
-        middleware logStdoutDev
 
-        get "/cities" $ json $ M.keys citiesDict
-        get "/cities/:city" $ do
-            cityP <- param "city"
-            paginateM (list cityP citiesDict) >>= json
+startServer :: Int -> Dict -> Dict -> IO ()
+startServer port citiesDict countriesDict = scotty port $ do
+    middleware logStdoutDev
 
-        get "/countries" $ json $ M.keys countriesDict
+    get "/cities" . json . M.keys $ citiesDict
+    get "/countries" . json . M.keys $ countriesDict
 
-        get "/countries/:country" $ do
-            countryP <- param "country"
-            paginateM (list countryP countriesDict) >>= json
+    get "/cities/:city" $
+        lookupCity citiesDict >>= paginate >>= json
 
-        get "/countries/:country/:city" $ do
-            countryP <- param "country"
-            cityP <- param "city"
-            paginateM (filter (\x -> cityP == city x) $ list countryP countriesDict) >>= json
+    get "/countries/:country" $
+        lookupCountry countriesDict >>= paginate >>= json
+
+    get "/countries/:country/:city" $
+        lookupCountry countriesDict >>= filterByCity >>= paginate >>= json
+
+    get "/headers" $ headers >>= return.map (\(k,v) -> k `LT.append` (LT.pack ": ") `LT.append` v) >>= json
+
+
+main :: IO ()
+main = do
+    (countriesDict,citiesDict) <- getArgs >>= loadAll
+    startServer 3000 citiesDict countriesDict
 
