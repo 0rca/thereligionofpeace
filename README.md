@@ -5,7 +5,7 @@ pages and serves them as json
 Install `stack` from [Stackage](http://www.stackage.org/)
 
 ```sh
-stack build
+stack build --no-system-ghc --install-ghc
 ```
 
 # Using
