@@ -1,6 +1,5 @@
-flags:
-  thereligionofpeace: {}
+flags: {}
 packages:
 - '.'
 extra-deps: []
-resolver: lts-2.20
+resolver: lts-3.10
