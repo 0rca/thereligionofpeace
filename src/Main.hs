@@ -43,19 +43,21 @@ data Attack = Attack { date :: DateTime
                      , killed :: Integer
                      , injured :: Integer
                      , description :: String
-                     } deriving (Eq,Show)
+                     }
+                     deriving (Eq,Show)
 
 instance Ord Attack where
     compare a b = compare (date a) (date b)
 
 instance ToJSON Attack where
-    toJSON (Attack date country city killed injured description) = object $ [
-        "date" .= date,
-        "country" .= country,
-        "city" .= city,
-        "killed" .= killed,
-        "injured" .= injured,
-        "description" .= description ]
+    toJSON (Attack date country city killed injured description) = object
+      ["date" .= date
+      ,"country" .= country
+      ,"city" .= city
+      ,"killed" .= killed
+      ,"injured" .= injured
+      ,"description" .= description
+      ]
 
 instance ToJSON DateTime where
     toJSON time = String $ pack $ timePrint ISO8601_Date time
@@ -64,7 +66,7 @@ type Lens a s = forall f.Functor f => (a -> f a) -> s -> f s
 
 -- takes a html text and returns a list of attacks
 extractData :: String -> [[String]]
-extractData = map normaliseColumns.map extractColumns.extractRows.extractTable.extractTags
+extractData = map (normaliseColumns . extractColumns) . extractRows . extractTable . extractTags
 
 extractTags :: String -> [Tag String]
 extractTags = canonicalizeTags.parseTags
@@ -89,13 +91,13 @@ readDate :: String -> Maybe DateTime
 readDate  = timeParse [Format_Year4,Format_Text '.',Format_Month2, Format_Text '.', Format_Day2]
 
 attackFromColumns :: [String] -> Maybe Attack
-attackFromColumns r = Attack <$>
-                    (readDate $ r!!0) <*>
-                    Just (r!!1) <*>
-                    Just (r!!2) <*>
-                    (readInt $ r!!3) <*>
-                    (readInt $ r!!4) <*>
-                    Just (r!!5)
+attackFromColumns r = Attack
+  <$> readDate (head r)
+  <*> Just (r!!1)
+  <*> Just (r!!2)
+  <*> readInt (r!!3)
+  <*> readInt (r!!4)
+  <*> Just (r!!5)
 
 getContentsOf :: FilePath -> IO String
 getContentsOf filepath =
@@ -172,11 +174,10 @@ startServer port citiesDict countriesDict = scotty port $ do
     get "/countries/:country/:city" $
         lookupCountry countriesDict >>= filterByCity >>= paginate >>= json
 
-    get "/headers" $ headers >>= return.map (\(k,v) -> k `LT.append` (LT.pack ": ") `LT.append` v) >>= json
+    get "/headers" $ liftM (map (\(k,v) -> k `LT.append` LT.pack ": " `LT.append` v)) headers >>= json
 
 
 main :: IO ()
 main = do
     (countriesDict,citiesDict) <- getArgs >>= loadAll
     startServer 3000 citiesDict countriesDict
-
