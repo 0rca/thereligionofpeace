@@ -86,5 +86,6 @@ startServer port (DataBase condict citdict attacks) =
                 "\n  limit: number of result per page" <>
                 "\n  page: page number" <>
                 "\n\nExample:" <>
+                "\n</pre>" <>
                 "\n<a href='http://localhost:3000/cities?limit=5&page=2'>http://localhost:3000/cities?limit=5&page=2</a>" <>
-                "\n</pre></body></html>"
+                "\n</body></html>"
