@@ -22,16 +22,13 @@ instance Ord Attack where
 instance ToJSON Attack where
     toJSON Attack {..} =
         object
-            [ "date" .= date
+            [ "date" .= toJSON (timePrint ISO8601_Date date)
             , "country" .= country
             , "city" .= city
             , "killed" .= killed
             , "injured" .= injured
             , "description" .= description
             ]
-
-instance ToJSON DateTime where
-    toJSON time = String $ pack $ timePrint ISO8601_Date time
 
 data DataBase = DataBase
     { countriesDict :: !Dict
