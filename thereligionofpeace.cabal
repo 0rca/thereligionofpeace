@@ -39,7 +39,7 @@ executable thereligionofpeace
                 ,conduit-combinators
                 ,http-conduit
                 ,resourcet
-
+                ,bytestring
   hs-source-dirs: src
   ghc-options:
     -- -O2
