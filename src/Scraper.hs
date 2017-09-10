@@ -18,16 +18,22 @@ tr_ = "<tr>"
 td_ :: String
 td_ = "<td>"
 
--- isDataTable == table with a header
+isDataRow :: StringLike str => [Tag str] -> Bool
+isDataRow r = 6 == fst (countTd r)
+
 isDataTable :: StringLike str => [Tag str] -> Bool
 isDataTable = not . null . partitions (~== th_) . head . partitions (~== tr_)
 
--- takes a html text and returns a list of attacks
+-- takes a html text and returns a list of attack column data
 extractData :: (Show str, StringLike str) => str -> [[str]]
-extractData =
-    map (normaliseColumns . extractColumns) .
-    extractRows . extractTable . extractTags
+extractData tags = undefined
+    -- map (normaliseColumns . extractColumns) .
+    -- L.filter . extractRows . extractTags
 
+--     foldr f [] (extractRows $ extractTags tags)
+--   where
+--     f r acc
+--         | isDataRow r =
 extractTags :: StringLike str => str -> [Tag str]
 extractTags = canonicalizeTags . parseTags
 
@@ -36,6 +42,13 @@ extractTable = concatMap tail . filter isDataTable . partitions (~== table_)
 
 extractRows :: StringLike str => [Tag str] -> [[Tag str]]
 extractRows = partitions (~== tr_)
+
+countTd :: StringLike str => [Tag str] -> (Integer, Integer)
+countTd = foldr f (0, 0)
+  where
+    f (TagOpen "td" _) (n, k) = (succ n, k)
+    f (TagClose "td") (n, k) = (n, succ k)
+    f _ acc = acc
 
 extractColumns :: (Show str, StringLike str) => [Tag str] -> [[str]]
 extractColumns tags =

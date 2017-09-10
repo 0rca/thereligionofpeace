@@ -34,11 +34,6 @@ executable thereligionofpeace
                 ,transformers
                 ,mtl
                 ,base>=4.7&&<=4.9
-                ,conduit
-                ,conduit-extra
-                ,conduit-combinators
-                ,http-conduit
-                ,resourcet
                 ,bytestring
   hs-source-dirs: src
   ghc-options:
