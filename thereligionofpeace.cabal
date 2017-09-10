@@ -26,7 +26,9 @@ executable thereligionofpeace
                 ,wai-extra
                 ,aeson
                 ,strict
+                ,megaparsec
                 ,tagsoup
+                ,tagsoup-megaparsec
                 ,hourglass
                 ,old-locale
                 ,time

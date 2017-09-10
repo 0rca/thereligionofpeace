@@ -1,66 +1,52 @@
 module Scraper where
 
 import Data.Hourglass
-import Data.Maybe
+import qualified Data.Text as T
 import Text.HTML.TagSoup
+import Text.Megaparsec
+import Text.Megaparsec.TagSoup
 import Text.StringLike
+
 import Types
 
-table_ :: String
-table_ = "<table>"
+attackRow ::
+       (Ord str, StringLike str) => TagParser str (str, str, str, str, str, str)
+attackRow = do
+    tagOpen "tr"
+    c1 <- tdCell
+    c2 <- tdCell
+    c3 <- tdCell
+    c4 <- tdCell
+    c5 <- tdCell
+    c6 <- tdCell
+    tagClose "tr"
+    return (c1, c2, c3, c4, c5, c6)
 
-th_ :: String
-th_ = "<th>"
-
-tr_ :: String
-tr_ = "<tr>"
-
-td_ :: String
-td_ = "<td>"
-
-isDataRow :: StringLike str => [Tag str] -> Bool
-isDataRow r = 6 == fst (countTd r)
-
-isDataTable :: StringLike str => [Tag str] -> Bool
-isDataTable = not . null . partitions (~== th_) . head . partitions (~== tr_)
+tdCell :: (Ord str, StringLike str) => TagParser str str
+tdCell = do
+    tagOpen "td"
+    TagText t <- tagText
+    tagClose "td"
+    return (castString . T.strip . castString $ t)
 
 -- takes a html text and returns a list of attack column data
-extractData :: (Show str, StringLike str) => str -> [[str]]
-extractData tags = undefined
-    -- map (normaliseColumns . extractColumns) .
-    -- L.filter . extractRows . extractTags
+extractData ::
+       (Ord str, StringLike str) => str -> [(str, str, str, str, str, str)]
+extractData tags = foldr f [] (extractRows $ extractTags tags)
+  where
+    f r acc =
+        case parseMaybe attackRow r of
+            Nothing -> acc
+            Just x -> x : acc
 
---     foldr f [] (extractRows $ extractTags tags)
---   where
---     f r acc
---         | isDataRow r =
 extractTags :: StringLike str => str -> [Tag str]
 extractTags = canonicalizeTags . parseTags
 
-extractTable :: StringLike str => [Tag str] -> [Tag str]
-extractTable = concatMap tail . filter isDataTable . partitions (~== table_)
-
 extractRows :: StringLike str => [Tag str] -> [[Tag str]]
-extractRows = partitions (~== tr_)
-
-countTd :: StringLike str => [Tag str] -> (Integer, Integer)
-countTd = foldr f (0, 0)
+extractRows = partitions (~== tr_) -- todo: simplify
   where
-    f (TagOpen "td" _) (n, k) = (succ n, k)
-    f (TagClose "td") (n, k) = (n, succ k)
-    f _ acc = acc
-
-extractColumns :: (Show str, StringLike str) => [Tag str] -> [[str]]
-extractColumns tags =
-    let tds = partitions (~== td_) tags
-    in map process tds
-  where
-    process td =
-        map (castString . unwords . words . castString . fromTagText) $
-        filter isTagText td
-
-normaliseColumns :: StringLike str => [[str]] -> [str]
-normaliseColumns = map $ fromMaybe "" . listToMaybe
+    tr_ :: String
+    tr_ = "<tr>"
 
 readInt :: StringLike str => str -> Maybe Integer
 readInt "" = Just 0
@@ -77,10 +63,10 @@ readDate =
         ] .
     toString
 
-attackFromColumns :: StringLike str => [str] -> Maybe Attack
-attackFromColumns r =
-    Attack <$> readDate (head r) <*> Just (castString $ r !! 1) <*>
-    Just (castString $ r !! 2) <*>
-    readInt (r !! 3) <*>
-    readInt (r !! 4) <*>
-    Just (castString $ r !! 5)
+attackFromColumns ::
+       StringLike str => (str, str, str, str, str, str) -> Maybe Attack
+attackFromColumns (c1, c2, c3, c4, c5, c6) =
+    Attack <$> readDate c1 <*> Just (castString c2) <*> Just (castString c3) <*>
+    readInt c4 <*>
+    readInt c5 <*>
+    Just (castString c6)

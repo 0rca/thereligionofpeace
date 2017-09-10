@@ -7,7 +7,6 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Data.List as L
 import qualified Data.Map.Strict as M
-import Data.Maybe
 import Data.Text
 import System.Environment (getArgs, lookupEnv)
 
@@ -22,9 +21,10 @@ readFiles :: [FilePath] -> IO LBS.ByteString
 readFiles xs = LBS.fromChunks `liftM` mapM BS.readFile xs
 
 parse' :: LBS.ByteString -> [Attack]
-parse' contents =
-    fmap (fromJust . attackFromColumns) $
-    L.filter (not . L.null) $ extractData contents
+parse' contents = L.foldr f [] (attackFromColumns `fmap` extractData contents)
+  where
+    f (Just x) acc = x : acc
+    f _ acc = acc
 
 mkDataBase :: [Attack] -> IO DataBase
 mkDataBase atks = do
