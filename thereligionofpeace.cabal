@@ -45,3 +45,4 @@ executable thereligionofpeace
     -- -O2
     -- -threaded
     -- -rtsopts
+  default-extensions: OverloadedStrings
