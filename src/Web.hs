@@ -1,10 +1,15 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Web where
 
 import Control.Monad
+
+-- import qualified Data.Map.Lazy as M
 import qualified Data.Map.Strict as M
 import Data.Maybe
+import Data.Monoid
+import Data.Text.Lazy (pack)
 import Network.Wai.Middleware.RequestLogger
 import Types
 import Web.Scotty
@@ -30,8 +35,13 @@ lookupCountry dict =
 lookupCity :: Dict -> ActionM [Attack]
 lookupCity dict = fromMaybe [] `liftM` (`M.lookup` dict) `liftM` param "city"
 
+casualties :: [Attack] -> (Integer, Integer, Integer)
+casualties = foldr f (0, 0, 0)
+  where
+    f x (k, i, t) = (k + killed x, i + injured x, succ t)
+
 startServer :: Int -> DataBase -> IO ()
-startServer port (DataBase condict citdict) =
+startServer port (DataBase condict citdict attacks) =
     scotty port $ do
         middleware logStdoutDev
         get "/cities" $ do
@@ -50,3 +60,15 @@ startServer port (DataBase condict citdict) =
             countries <- lookupCountry condict
             filtered <- paginate =<< filterByCity countries
             json filtered
+        get "/" $ do
+            let (murdered, wounded, total) = casualties attacks
+            text $
+                "Total attacks since 9/11: " <> pack (show total) <>
+                "\nIn countries: " <>
+                pack (show (M.size condict)) <>
+                "\nIn cities: " <>
+                pack (show (M.size citdict)) <>
+                "\nTotal killed: " <>
+                pack (show murdered) <>
+                "\nTotal injured: " <>
+                pack (show wounded)

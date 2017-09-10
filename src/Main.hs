@@ -44,12 +44,7 @@ mkDataBase atks = do
         show (M.size cityDict) ++
         "\nTotal killed: " ++
         show murdered ++ "\nTotal injured: " ++ show wounded
-    return $ DataBase countryDict cityDict
-
-casualties :: [Attack] -> (Integer, Integer, Integer)
-casualties = L.foldr f (0, 0, 0)
-  where
-    f x (k, i, t) = (k + killed x, i + injured x, succ t)
+    return $ DataBase countryDict cityDict atks'
 
 main :: IO ()
 main = do

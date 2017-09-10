@@ -33,6 +33,7 @@ instance ToJSON Attack where
 data DataBase = DataBase
     { countriesDict :: !Dict
     , citiesDict :: !Dict
+    , attacks :: ![Attack]
     }
 
 type Dict = M.Map Text [Attack]
