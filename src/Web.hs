@@ -16,9 +16,12 @@ import Web.Scotty
 
 paginate :: [a] -> ActionM [a]
 paginate xs = do
-    limit <- param "limit" `rescue` (return . const 25)
+    limit <- param "limit" `rescue` (return . const (-1))
     page <- param "page" `rescue` (return . const 0)
-    return $ paginate' page limit xs
+    return $
+        if limit > 0
+            then paginate' page limit xs
+            else xs
   where
     paginate' page limit = take limit . drop (page * limit)
 
@@ -46,20 +49,20 @@ startServer port (DataBase condict citdict attacks) =
         middleware logStdoutDev
         get "/cities" $ do
             let cities = M.keys citdict
-            json cities
+            json =<< paginate cities
         get "/countries" $ do
             let countries = M.keys condict
-            json countries
+            json =<< paginate countries
         get "/cities/:city" $ do
-            cities <- paginate =<< lookupCity citdict
-            json cities
+            cities <- lookupCity citdict
+            json =<< paginate cities
         get "/countries/:country" $ do
-            countries <- paginate =<< lookupCountry condict
-            json countries
+            countries <- lookupCountry condict
+            json =<< paginate countries
         get "/countries/:country/:city" $ do
             countries <- lookupCountry condict
-            filtered <- paginate =<< filterByCity countries
-            json filtered
+            filtered <- filterByCity countries
+            json =<< paginate filtered
         get "/" $ do
             let (murdered, wounded, total) = casualties attacks
             html $
