@@ -1,0 +1,4 @@
+#!/bin/sh
+echo "Usage: dl YYYY where YYYY is in [2001..2017]"
+
+curl https://www.thereligionofpeace.com/attacks/attacks.aspx?Yr=$1 -o resources/$1.html
