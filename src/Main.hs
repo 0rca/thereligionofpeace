@@ -4,8 +4,6 @@
 
 module Main where
 
-import Control.Applicative
-import Control.Monad (liftM)
 import Control.Monad.State.Strict
 import Data.Aeson.Types
 import Data.Hourglass
@@ -15,11 +13,13 @@ import Data.Maybe
 import Data.Text (pack)
 import qualified Data.Text.Lazy as LT
 import Network.Wai.Middleware.RequestLogger
-import Scraper
+
 import System.Environment (getArgs)
 import System.IO
 import System.IO.Strict as S
 import qualified Web.Scotty as WS
+
+import Scraper
 
 instance Ord Attack where
     compare a b = compare (date a) (date b)
@@ -57,15 +57,12 @@ filterByCity xs = filterCities <$> WS.param "city"
     filterCities c = filterOn city (c ==) xs
     filterOn f p = filter (p . f)
 
-lookupParam x dict = (`find` dict) <$> WS.param x
-  where
-    find k = fromMaybe [] . M.lookup k
-
 lookupCountry :: Dict -> WS.ActionM [Attack]
-lookupCountry = lookupParam "country"
+lookupCountry dict =
+    fromMaybe [] `liftM` (`M.lookup` dict) `liftM` WS.param "country"
 
 lookupCity :: Dict -> WS.ActionM [Attack]
-lookupCity = lookupParam "city"
+lookupCity dict = fromMaybe [] `liftM` (`M.lookup` dict) `liftM` WS.param "city"
 
 readAttacks :: FilePath -> StateT [Attack] IO ()
 readAttacks fname = do
@@ -115,5 +112,4 @@ startServer port (countriesDict, citiesDict) =
             WS.json
 
 main :: IO ()
--- main = main1
 main = getArgs >>= loadAll >>= startServer 3000

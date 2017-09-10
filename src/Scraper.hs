@@ -1,25 +1,22 @@
 module Scraper where
 
-import Control.Monad
 import Control.Monad.Trans (liftIO)
-import Control.Monad.Trans.Resource
 import qualified Data.Conduit as C
-import qualified Data.Conduit.Binary as CB
-import Data.Conduit.Filesystem
-import qualified Data.Conduit.List as CL
 import Data.Hourglass
 import Data.Maybe
-import Network.HTTP.Conduit
-import System.Environment (getArgs)
 import Text.HTML.TagSoup
 
-table_ = "<table>" :: String
+table_ :: String
+table_ = "<table>"
 
-th_ = "<th>" :: String
+th_ :: String
+th_ = "<th>"
 
-tr_ = "<tr>" :: String
+tr_ :: String
+tr_ = "<tr>"
 
-td_ = "<td>" :: String
+td_ :: String
+td_ = "<td>"
 
 -- isDataTable == table with a header
 isDataTable :: [Tag String] -> Bool
@@ -83,14 +80,14 @@ sourceList = mapM_ C.yield
 
 sink :: C.Sink String IO ()
 sink = C.awaitForever (liftIO . putStrLn)
-
-main1 = do
-    files <- getArgs
-    runResourceT $ sourceDirectory "." C.$$ C.awaitForever (liftIO . putStrLn)
-    -- runResourceT $ CB.sourceFile (head files) C.$$ C.awaitForever (liftIO . print)
-    -- request <- parseUrl "http://thereligionofpeace.com/"
-    -- manager <- newManager tlsManagerSettings
-    -- runResourceT $ do
-    --   response <- http request manager
-    --   responseBody response C.$$+- CB.sinkFile "current.htm"
-    sourceList [1, 2, 3] C.$$ CL.mapM_ print
+-- main1 :: IO ()
+-- main1 = do
+--     _files <- getArgs
+--     runResourceT $ sourceDirectory "." C.$$ C.awaitForever (liftIO . putStrLn)
+--     -- runResourceT $ CB.sourceFile (head files) C.$$ C.awaitForever (liftIO . print)
+--     -- request <- parseUrl "http://thereligionofpeace.com/"
+--     -- manager <- newManager tlsManagerSettings
+--     -- runResourceT $ do
+--     --   response <- http request manager
+--     --   responseBody response C.$$+- CB.sinkFile "current.htm"
+--     sourceList [1, 2, 3] C.$$ CL.mapM_ print
