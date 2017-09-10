@@ -18,7 +18,8 @@ cabal-version:       >=1.10
 executable thereligionofpeace
   default-language:  Haskell2010
   main-is:           Main.hs
-  -- other-modules:
+  other-modules: Scraper
+
   -- other-extensions:
   build-depends: containers
                 ,scotty
@@ -33,6 +34,12 @@ executable thereligionofpeace
                 ,transformers
                 ,mtl
                 ,base>=4.7&&<=4.9
+                ,conduit
+                ,conduit-extra
+                ,conduit-combinators
+                ,http-conduit
+                ,resourcet
+
   hs-source-dirs: src
   ghc-options:
     -- -O2
