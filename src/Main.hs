@@ -1,13 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+
 module Main where
 
-import System.Environment (getArgs)
-import System.IO
-import System.IO.Strict as S
 import Control.Applicative
 import Control.Monad (liftM)
+import Control.Monad.State.Strict
 import Data.Aeson.Types
 import Data.Hourglass
 import Data.List (sort)
@@ -16,22 +15,25 @@ import Data.Maybe
 import Data.Text (pack)
 import qualified Data.Text.Lazy as LT
 import Network.Wai.Middleware.RequestLogger
-import qualified Web.Scotty as WS
-import Control.Monad.State.Strict
 import Scraper
+import System.Environment (getArgs)
+import System.IO
+import System.IO.Strict as S
+import qualified Web.Scotty as WS
 
 instance Ord Attack where
     compare a b = compare (date a) (date b)
 
 instance ToJSON Attack where
-    toJSON Attack{..} =
+    toJSON Attack {..} =
         object
             [ "date" .= date
             , "country" .= country
             , "city" .= city
             , "killed" .= killed
             , "injured" .= injured
-            , "description" .= description]
+            , "description" .= description
+            ]
 
 instance ToJSON DateTime where
     toJSON time = String $ pack $ timePrint ISO8601_Date time
@@ -74,7 +76,9 @@ readAttacks fname = do
             putStrLn $ "Reading " ++ fname
             S.hGetContents h
     let attacks =
-            map (fromJust . attackFromColumns) . filter (not . null) . extractData $ a
+            map (fromJust . attackFromColumns) .
+            filter (not . null) . extractData $
+            a
     modify' (mappend attacks)
 
 loadAll :: [FilePath] -> IO (Dict, Dict)
@@ -93,7 +97,7 @@ loadAll files = do
     return (countriesDict, citiesDict)
 
 startServer :: Int -> (Dict, Dict) -> IO ()
-startServer port (countriesDict,citiesDict) =
+startServer port (countriesDict, citiesDict) =
     WS.scotty port $ do
         WS.middleware logStdoutDev
         WS.get "/cities" . WS.json . M.keys $ citiesDict
@@ -102,12 +106,11 @@ startServer port (countriesDict,citiesDict) =
         WS.get "/countries/:country" $
             lookupCountry countriesDict >>= paginate >>= WS.json
         WS.get "/countries/:country/:city" $
-            lookupCountry countriesDict >>= filterByCity >>= paginate >>= WS.json
+            lookupCountry countriesDict >>= filterByCity >>= paginate >>=
+            WS.json
         WS.get "/headers" $
             fmap
-                (map
-                    (\(k,v) ->
-                          k `LT.append` LT.pack ": " `LT.append` v))
+                (map (\(k, v) -> k `LT.append` LT.pack ": " `LT.append` v))
                 WS.headers >>=
             WS.json
 
