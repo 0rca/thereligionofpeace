@@ -43,10 +43,7 @@ extractTags :: StringLike str => str -> [Tag str]
 extractTags = canonicalizeTags . parseTags
 
 extractRows :: StringLike str => [Tag str] -> [[Tag str]]
-extractRows = partitions (~== tr_) -- todo: simplify
-  where
-    tr_ :: String
-    tr_ = "<tr>"
+extractRows = partitions (isTagOpenName "tr")
 
 readInt :: StringLike str => str -> Maybe Integer
 readInt "" = Just 0
