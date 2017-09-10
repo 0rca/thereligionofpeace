@@ -26,3 +26,4 @@ Run `stack exec thereligionofpeace resources/*.html` and go to [this page](http:
 `/countries/:country/:city` - narrow search to a particular city within a
 country
 
+Pagination example: `page=3&limit=25`

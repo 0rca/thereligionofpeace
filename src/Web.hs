@@ -62,13 +62,26 @@ startServer port (DataBase condict citdict attacks) =
             json filtered
         get "/" $ do
             let (murdered, wounded, total) = casualties attacks
-            text $
-                "Total attacks since 9/11: " <> pack (show total) <>
+            html $
+                "<html><body><pre>" <> "\nTotal attacks since 9/11: " <>
+                pack (show total) <>
                 "\nIn countries: " <>
                 pack (show (M.size condict)) <>
                 "\nIn cities: " <>
                 pack (show (M.size citdict)) <>
-                "\nTotal killed: " <>
+                "\nPeople murdered: " <>
                 pack (show murdered) <>
-                "\nTotal injured: " <>
-                pack (show wounded)
+                "\nPeople injured: " <>
+                pack (show wounded) <>
+                "\n\nAPI Documentation:" <>
+                "\nGET /cities - list of cities attacked" <>
+                "\nGET /cities/:city - list of attacks per city" <>
+                "\nGET /countries - list countries attacked" <>
+                "\nGET /countries/:country - list of attacks per country" <>
+                "\nGET /countries/:country/:city - narrow search to a certain city within a country" <>
+                "\n\nPagination:" <>
+                "\n  limit: number of result per page" <>
+                "\n  page: page number" <>
+                "\n\nExample:" <>
+                "\n<a href='http://localhost:3000/cities?limit=5&page=2'>http://localhost:3000/cities?limit=5&page=2</a>" <>
+                "\n</pre></body></html>"
