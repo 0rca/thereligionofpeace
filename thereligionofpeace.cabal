@@ -21,6 +21,7 @@ library
                     Web
   build-depends:
     base                   >=4.9 && <5.0,
+    protolude              >= 0.2,
     containers,
     scotty,
     wai-extra,
@@ -38,7 +39,7 @@ library
     bytestring
 
   default-language:   Haskell2010
-  default-extensions: OverloadedStrings
+  default-extensions: OverloadedStrings NoImplicitPrelude
   hs-source-dirs:     src
   ghc-options:
     -Werror
@@ -54,8 +55,10 @@ executable thereligionofpeace
                     , bytestring
                     , containers
                     , text
+                    , protolude
+                    , optparse-applicative
   default-language:   Haskell2010
-  default-extensions: OverloadedStrings
+  default-extensions: OverloadedStrings NoImplicitPrelude
   ghc-options:
     -Wall
     -Werror

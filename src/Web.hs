@@ -3,12 +3,9 @@
 
 module Web where
 
-import Control.Monad
+import Protolude hiding (get)
 
--- import qualified Data.Map.Lazy as M
 import qualified Data.Map.Strict as M
-import Data.Maybe
-import Data.Monoid
 import Data.Text.Lazy (pack)
 import Network.Wai.Middleware.RequestLogger
 import Types
@@ -38,7 +35,7 @@ lookupCountry dict =
 lookupCity :: Dict -> ActionM [Attack]
 lookupCity dict = fromMaybe [] `liftM` (`M.lookup` dict) `liftM` param "city"
 
-casualties :: [Attack] -> (Integer, Integer, Integer)
+casualties :: [Attack] -> (Int, Int, Int)
 casualties = foldr f (0, 0, 0)
   where
     f x (k, i, t) = (k + killed x, i + injured x, succ t)

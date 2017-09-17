@@ -2,17 +2,17 @@
 
 module Types where
 
+import Protolude
 import Data.Aeson.Types
 import Data.Hourglass
 import qualified Data.Map.Strict as M
-import Data.Text
 
 data Attack = Attack
     { date :: !DateTime
     , country :: !Text
     , city :: !Text
-    , killed :: !Integer
-    , injured :: !Integer
+    , killed :: !Int
+    , injured :: !Int
     , description :: !Text
     } deriving (Eq, Show)
 

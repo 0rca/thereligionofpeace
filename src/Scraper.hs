@@ -1,12 +1,12 @@
 module Scraper where
 
+import Protolude
 import Data.Hourglass
 import qualified Data.Text as T
 import Text.HTML.TagSoup
 import Text.Megaparsec
 import Text.Megaparsec.TagSoup
 import Text.StringLike
-
 import Types
 
 attackRow ::
@@ -45,9 +45,11 @@ extractTags = canonicalizeTags . parseTags
 extractRows :: StringLike str => [Tag str] -> [[Tag str]]
 extractRows = partitions (isTagOpenName "tr")
 
-readInt :: StringLike str => str -> Maybe Integer
+readInt :: StringLike str => str -> Maybe Int
 readInt "" = Just 0
-readInt s = Just $ read (toString s)
+readInt s = case reads (toString s) of
+    ((i,""):_) -> Just i
+    _ -> Nothing
 
 readDate :: StringLike str => str -> Maybe DateTime
 readDate =

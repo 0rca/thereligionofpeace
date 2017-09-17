@@ -3,4 +3,5 @@ packages:
 - '.'
 extra-deps:
 - tagsoup-megaparsec-0.2.0.0
+- protolude-0.2
 resolver: lts-9.3
